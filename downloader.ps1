@@ -1,25 +1,30 @@
-# Prompt the user for a URL
-$url = Read-Host "Enter the URL for the file you want to download"
+# Define the path to your text file
+$scannedURLsPath = ".\Scans\http___www.exploremarmaris.com_read_Survival_.txt"
+$outputPath = ".\Output"
 
-# Validate the URL
-if ($url -match '^https?://[^\s/$.?#].[^\s]*$') {
-    Write-Host "Valid URL entered: $url"
+# Read the content of the text file line by line
+$urls = Get-Content $scannedURLsPath
 
-    # Determine if the URL is a file or a folder
-    $response = Invoke-WebRequest -Uri $url -Method Head
-    $contentType = $response.Headers["Content-Type"]
+# Loop through each URL and download the file
+foreach ($url in $urls) {
+    $url = $url.Trim()  # Remove any leading/trailing spaces
     
-    if ($contentType -match "text/html") {
-        Write-Host "URL points to a folder"
-        # Add folder download logic here
+    # Extract the filename from the URL
+    $fileName = [System.IO.Path]::GetFileName($url)
+    
+    # Decode the URL-encoded file name
+    $fileName = [System.Web.HttpUtility]::UrlDecode($fileName)
+    
+    # Use the Invoke-WebRequest cmdlet to download the file
+    try {
+        Invoke-WebRequest -Uri $url -OutFile (Join-Path -Path $outputPath -ChildPath $fileName) -ErrorAction Stop
+        Write-Host "Downloaded $fileName"
     }
-    else {
-        Write-Host "URL points to a file"
-        # Add file download logic here
+    catch {
+        $errorMessage = $_.Exception.Message
+        Write-Host "Failed to download $fileName. Error: $errorMessage"
+        Write-Error $errorMessage  # Add error logging
     }
+    
+    Start-Sleep -Seconds 0.1  # Wait for X seconds before the next request
 }
-else {
-    Write-Host "Invalid URL format. Please make sure to include http:// or https://"
-}
-
-# http://www.exploremarmaris.com/read/Survival/
